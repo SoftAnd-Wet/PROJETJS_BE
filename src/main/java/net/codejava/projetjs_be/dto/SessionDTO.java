@@ -6,13 +6,14 @@ import java.time.LocalDateTime;
 
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class SessionDTO {
-    private Long id;
+    private Long          id;
     private LocalDateTime debut;
     private LocalDateTime fin;
-    private int dureePrevueMin;
-    private int dureeReelleMin;
+    private int           dureePrevueMin;
+    private int           dureeReelleMin;
     private StatutSession statut;
-    private boolean completee;
-    private Long matiereId;
-    private String matiereNom;
+    private boolean       completee;
+    private Long          matiereId;
+    private String        matiereNom;
+    private String nom;
 }

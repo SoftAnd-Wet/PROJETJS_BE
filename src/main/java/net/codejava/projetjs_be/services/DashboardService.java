@@ -13,8 +13,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class DashboardService {
 
-    private final SessionRepository  sessionRepository;
-    private final MatiereRepository  matiereRepository;
+    private final SessionRepository sessionRepository;
+    private final MatiereRepository matiereRepository;
 
     public Map<String, Object> getDashboard(Long userId) {
         Map<String, Object> stats = new HashMap<>();
@@ -23,10 +23,27 @@ public class DashboardService {
         Long totalGeneral = sessionRepository.sumDureeReelleByUserId(userId);
         stats.put("tempsTotalMin", totalGeneral != null ? totalGeneral : 0);
 
+        // ── Aujourd'hui ──
+        LocalDateTime debutAujourd = LocalDate.now().atStartOfDay();
+        LocalDateTime finAujourd   = debutAujourd.plusDays(1);
+
+        List<SessionEtude> sessionsAujourd = sessionRepository
+                .findByUtilisateurIdAndDebutBetween(userId, debutAujourd, finAujourd);
+
+        long minutesAujourd = sessionsAujourd.stream()
+                .filter(SessionEtude::isCompletee)
+                .mapToLong(s -> s.getDureeReelleMin() > 0
+                        ? s.getDureeReelleMin()
+                        : s.getDureePrevueMin())
+                .sum();
+
+        stats.put("tempsAujourdMin",   minutesAujourd);
+        stats.put("sessionsAujourdNb", sessionsAujourd.size());
+
         // ── Sessions de la semaine ──
         LocalDateTime debutSemaine = LocalDate.now()
                 .with(DayOfWeek.MONDAY).atStartOfDay();
-        LocalDateTime finSemaine = debutSemaine.plusDays(7);
+        LocalDateTime finSemaine   = debutSemaine.plusDays(7);
 
         List<SessionEtude> sessionsSemaine = sessionRepository
                 .findByUtilisateurIdAndDebutBetween(userId, debutSemaine, finSemaine);
@@ -36,9 +53,24 @@ public class DashboardService {
         // ── Temps étudié CETTE semaine ──
         long minutesSemaine = sessionsSemaine.stream()
                 .filter(SessionEtude::isCompletee)
-                .mapToLong(SessionEtude::getDureeReelleMin)
+                .mapToLong(s -> s.getDureeReelleMin() > 0
+                        ? s.getDureeReelleMin()
+                        : s.getDureePrevueMin())
                 .sum();
         stats.put("tempsSemainMin", minutesSemaine);
+
+        // ── Ce mois ──
+        LocalDateTime debutMois = LocalDate.now()
+                .withDayOfMonth(1).atStartOfDay();
+        List<SessionEtude> sessionsMois = sessionRepository
+                .findByUtilisateurIdAndDebutBetween(userId, debutMois, finAujourd);
+        long minutesMois = sessionsMois.stream()
+                .filter(SessionEtude::isCompletee)
+                .mapToLong(s -> s.getDureeReelleMin() > 0
+                        ? s.getDureeReelleMin()
+                        : s.getDureePrevueMin())
+                .sum();
+        stats.put("tempsMoisMin", minutesMois);
 
         // ── Complétées vs planifiées ──
         long completees = sessionRepository
@@ -53,9 +85,9 @@ public class DashboardService {
                 .findByUtilisateurIdOrderByPrioriteAsc(userId)
                 .stream()
                 .map(m -> Map.of(
-                        "nom",        m.getNom(),
+                        "nom",         m.getNom(),
                         "progression", m.getProgression(),
-                        "objectif",   m.getObjectifHebdoHeures()
+                        "objectif",    m.getObjectifHebdoHeures()
                 )).toList();
         stats.put("progressionMatieres", progressions);
 

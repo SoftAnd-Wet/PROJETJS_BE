@@ -17,4 +17,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             Long userId, TypeNotif type);
 
     long countByDestinataireIdAndLueFalse(Long userId);
+    boolean existsByDestinataireIdAndTypeAndMessage(
+        Long destinataireId, TypeNotif type, String message
+    );
 }

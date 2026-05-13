@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface DisponibiliteRepository extends JpaRepository<Disponibilite, Long> {
     List<Disponibilite> findByUtilisateurId(Long userId);
+    void deleteByUtilisateurId(Long userId);
 }

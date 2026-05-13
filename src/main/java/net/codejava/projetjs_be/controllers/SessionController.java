@@ -3,9 +3,9 @@ package net.codejava.projetjs_be.controllers;
 import lombok.RequiredArgsConstructor;
 import net.codejava.projetjs_be.dto.*;
 import net.codejava.projetjs_be.entities.Utilisateur;
+import net.codejava.projetjs_be.repositories.UtilisateurRepository;
 import net.codejava.projetjs_be.services.SessionService;
 import net.codejava.projetjs_be.services.PlanificateurService;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +20,7 @@ public class SessionController {
 
     private final SessionService      sessionService;
     private final PlanificateurService planificateurService;
+    private final UtilisateurRepository utilisateurRepository;
 
     private Long getUserId(Authentication auth) {
         return ((Utilisateur) auth.getPrincipal()).getId();
@@ -75,9 +76,20 @@ public class SessionController {
 
     @PostMapping("/planifier")
     public ResponseEntity<ApiResponse<List<SessionDTO>>> planifier(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate semaine,
+            @RequestParam String semaine,
+            @RequestParam(defaultValue = "90") int dureeMax,
             Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(
-                planificateurService.genererPlanning(getUserId(auth), semaine)));
+
+        Utilisateur u = utilisateurRepository.findByEmail(auth.getName())
+                .orElseThrow();
+        LocalDate date = LocalDate.parse(semaine);
+
+        // Convertir heures → minutes (frontend envoie en heures ex: 2.0)
+        int dureeMin = (int)(dureeMax * 60);
+
+        List<SessionDTO> result = planificateurService.genererPlanning(
+            u.getId(), date, dureeMin
+        );
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 }

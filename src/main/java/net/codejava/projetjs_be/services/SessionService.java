@@ -15,9 +15,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SessionService {
 
-    private final SessionRepository    sessionRepository;
-    private final MatiereRepository    matiereRepository;
+    private final SessionRepository     sessionRepository;
+    private final MatiereRepository     matiereRepository;
     private final UtilisateurRepository utilisateurRepository;
+    private final NotificationService   notificationService;
 
     public List<SessionDTO> getMesSessions(Long userId) {
         return sessionRepository.findByUtilisateurId(userId)
@@ -36,7 +37,11 @@ public class SessionService {
                 .completee(false)
                 .utilisateur(u);
 
-        // matiereId optionnel
+        // ✅ SOLUTION : stocker le nom libre directement sur la session
+        if (dto.getNom() != null && !dto.getNom().isBlank()) {
+            builder.nom(dto.getNom().trim());
+        }
+
         if (dto.getMatiereId() != null) {
             Matiere m = matiereRepository.findById(dto.getMatiereId())
                     .orElseThrow(() -> new RuntimeException("Matière non trouvée"));
@@ -69,7 +74,9 @@ public class SessionService {
             matiereRepository.save(m);
         }
 
-        return toDTO(sessionRepository.save(s));
+        SessionDTO result = toDTO(sessionRepository.save(s));
+        notificationService.verifierObjectifAtteint(s);
+        return result;
     }
 
     public SessionDTO annuler(Long userId, Long id) {
@@ -92,16 +99,30 @@ public class SessionService {
     }
 
     public SessionDTO toDTO(SessionEtude s) {
+        //Résoudre le meilleur nom disponible
+        String matiereNom = s.getMatiere() != null
+                ? s.getMatiere().getNom()
+                : (s.getNom() != null ? s.getNom() : "Session libre");
+
+        //Calculer dureePrevueMin si = 0
+        int dureePrevueMin = s.getDureePrevueMin();
+        if (dureePrevueMin <= 0 && s.getDebut() != null && s.getFin() != null) {
+            dureePrevueMin = (int) java.time.Duration.between(
+                s.getDebut(), s.getFin()
+            ).toMinutes();
+        }
+
         return SessionDTO.builder()
                 .id(s.getId())
+                .nom(s.getNom())                   
                 .debut(s.getDebut())
                 .fin(s.getFin())
-                .dureePrevueMin(s.getDureePrevueMin())
+                .dureePrevueMin(dureePrevueMin)    
                 .dureeReelleMin(s.getDureeReelleMin())
                 .statut(s.getStatut())
                 .completee(s.isCompletee())
                 .matiereId(s.getMatiere() != null ? s.getMatiere().getId() : null)
-                .matiereNom(s.getMatiere() != null ? s.getMatiere().getNom() : "Session libre")
+                .matiereNom(matiereNom)
                 .build();
     }
 }

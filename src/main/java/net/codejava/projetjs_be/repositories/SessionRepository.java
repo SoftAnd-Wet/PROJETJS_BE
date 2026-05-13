@@ -30,6 +30,12 @@ public interface SessionRepository extends JpaRepository<SessionEtude, Long> {
            "JOIN SessionPartagee sp ON sp.session.id = s.id " +
            "WHERE sp.groupe.id = :groupeId")
     List<SessionEtude> findByGroupeId(@Param("groupeId") Long groupeId);
+    // Retourne la liste pour permettre la suppression des FK d'abord
+    List<SessionEtude> findByUtilisateurIdAndDebutBetweenAndStatut(
+            Long userId,
+            LocalDateTime debut,
+            LocalDateTime fin,
+            StatutSession statut);
 
     @Modifying
     @Transactional
@@ -40,4 +46,10 @@ public interface SessionRepository extends JpaRepository<SessionEtude, Long> {
             @Param("debut") LocalDateTime debut,
             @Param("fin") LocalDateTime fin,
             @Param("statut") StatutSession statut);
+    @Query("SELECT s FROM SessionEtude s WHERE s.debut BETWEEN :debut AND :fin " +
+           "AND s.statut = 'PLANIFIEE'")
+    List<SessionEtude> findSessionsDebutantEntre(
+        @Param("debut") LocalDateTime debut,
+        @Param("fin") LocalDateTime fin
+    );
 }

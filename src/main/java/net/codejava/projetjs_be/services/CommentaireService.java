@@ -1,4 +1,3 @@
-// services/CommentaireService.java
 package net.codejava.projetjs_be.services;
 
 import lombok.RequiredArgsConstructor;
@@ -6,7 +5,7 @@ import net.codejava.projetjs_be.dto.CommentaireDTO;
 import net.codejava.projetjs_be.entities.*;
 import net.codejava.projetjs_be.repositories.*;
 import org.springframework.stereotype.Service;
-
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,54 +13,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CommentaireService {
 
-    private final CommentaireRepository commentaireRepository;
-    private final SessionRepository sessionRepository;
-    private final UtilisateurRepository utilisateurRepository;
+    private final CommentaireRepository  commentaireRepository;
+    private final SessionRepository      sessionRepository;
+    private final UtilisateurRepository  utilisateurRepository;
 
-    // Voir tous les commentaires d'une session
-    public List<CommentaireDTO> getCommentaires(Long sessionId) {
+    public List<CommentaireDTO> getCommentaires(Long userId, Long sessionId) {
         return commentaireRepository.findBySessionIdOrderByCreeLe(sessionId)
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    // Ajouter un commentaire
-    public CommentaireDTO ajouter(Long userId, Long sessionId, CommentaireDTO dto) {
-        Utilisateur auteur = utilisateurRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        SessionEtude session = sessionRepository.findById(sessionId)
+    public CommentaireDTO ajouter(Long userId, Long sessionId, String contenu) {
+        SessionEtude s = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session non trouvée"));
+        Utilisateur u = utilisateurRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
         Commentaire c = Commentaire.builder()
-                .contenu(dto.getContenu())
-                .auteur(auteur)
-                .session(session)
+                .session(s)
+                .auteur(u)
+                .contenu(contenu)
+                .creeLe(LocalDateTime.now())
                 .build();
 
         return toDTO(commentaireRepository.save(c));
     }
 
-    // Modifier un commentaire
-    public CommentaireDTO modifier(Long userId, Long id, CommentaireDTO dto) {
-        Commentaire c = commentaireRepository.findById(id)
+    public void supprimer(Long userId, Long commentaireId) {
+        Commentaire c = commentaireRepository.findById(commentaireId)
                 .orElseThrow(() -> new RuntimeException("Commentaire non trouvé"));
-
-        if (!c.getAuteur().getId().equals(userId)) {
-            throw new RuntimeException("Vous ne pouvez modifier que vos propres commentaires");
-        }
-
-        c.setContenu(dto.getContenu());
-        return toDTO(commentaireRepository.save(c));
-    }
-
-    // Supprimer un commentaire
-    public void supprimer(Long userId, Long id) {
-        Commentaire c = commentaireRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Commentaire non trouvé"));
-
-        if (!c.getAuteur().getId().equals(userId)) {
-            throw new RuntimeException("Vous ne pouvez supprimer que vos propres commentaires");
-        }
-
+        if (!c.getAuteur().getId().equals(userId))
+            throw new RuntimeException("Accès refusé");
         commentaireRepository.delete(c);
     }
 
@@ -69,10 +50,9 @@ public class CommentaireService {
         return CommentaireDTO.builder()
                 .id(c.getId())
                 .contenu(c.getContenu())
-                .creeLe(c.getCreeLe())
-                .sessionId(c.getSession().getId())
-                .auteurId(c.getAuteur().getId())
                 .auteurNom(c.getAuteur().getNom())
+                .auteurId(c.getAuteur().getId())
+                .creeLe(c.getCreeLe())
                 .build();
     }
 }

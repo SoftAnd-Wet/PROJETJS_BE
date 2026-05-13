@@ -1,6 +1,5 @@
 package net.codejava.projetjs_be.controllers;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import net.codejava.projetjs_be.dto.*;
 import net.codejava.projetjs_be.entities.Utilisateur;
@@ -10,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sessions/{sessionId}/commentaires")
@@ -21,30 +21,21 @@ public class CommentaireController {
     // GET /api/sessions/{sessionId}/commentaires
     @GetMapping
     public ResponseEntity<ApiResponse<List<CommentaireDTO>>> getCommentaires(
-            @PathVariable Long sessionId) {
+            @PathVariable Long sessionId,
+            Authentication auth) {
         return ResponseEntity.ok(ApiResponse.ok(
-                commentaireService.getCommentaires(sessionId)));
+                commentaireService.getCommentaires(getUserId(auth), sessionId)));
     }
 
     // POST /api/sessions/{sessionId}/commentaires
     @PostMapping
     public ResponseEntity<ApiResponse<CommentaireDTO>> ajouter(
             @PathVariable Long sessionId,
-            @Valid @RequestBody CommentaireDTO dto,
+            @RequestBody Map<String, String> body,
             Authentication auth) {
+        String contenu = body.get("contenu");
         return ResponseEntity.ok(ApiResponse.ok(
-                commentaireService.ajouter(getUserId(auth), sessionId, dto)));
-    }
-
-    // PUT /api/sessions/{sessionId}/commentaires/{id}
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<CommentaireDTO>> modifier(
-            @PathVariable Long sessionId,
-            @PathVariable Long id,
-            @Valid @RequestBody CommentaireDTO dto,
-            Authentication auth) {
-        return ResponseEntity.ok(ApiResponse.ok(
-                commentaireService.modifier(getUserId(auth), id, dto)));
+                commentaireService.ajouter(getUserId(auth), sessionId, contenu)));
     }
 
     // DELETE /api/sessions/{sessionId}/commentaires/{id}
